@@ -8,9 +8,11 @@ from keras.models import model_from_json
 pygame.init()
 
 # Constants
-WINDOW_SIZE = 800
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 850  # Extra space for status bar
 BOARD_SIZE = 8
-SQUARE_SIZE = WINDOW_SIZE // BOARD_SIZE
+SQUARE_SIZE = WINDOW_WIDTH // BOARD_SIZE
+STATUS_BAR_HEIGHT = 50
 FPS = 60
 
 # Colors
@@ -22,7 +24,7 @@ HIGHLIGHT = (124, 252, 0, 100)
 
 class CheckersGame:
     def __init__(self, ai_model=None):
-        self.screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption('Checkers')
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Arial', 24)
@@ -48,11 +50,27 @@ class CheckersGame:
                         self.board[i, j] = 1
 
     def draw_board(self):
+        # Draw status bar background
+        status_bg = pygame.Rect(0, 0, WINDOW_WIDTH, STATUS_BAR_HEIGHT)
+        pygame.draw.rect(self.screen, WHITE, status_bg)
+        
+        # Draw status text
+        if self.game_over:
+            status_text = f"Game Over - {'White' if self.winner == 1 else 'Black'} wins!"
+            text_color = (200, 0, 0)  # Red for game over
+        else:
+            status_text = f"Current Turn: {'White' if self.turn == 1 else 'Black'}"
+            text_color = (0, 100, 0) if self.turn == 1 else (0, 0, 0)  # Green for white's turn, black for black's turn
+        
+        text = self.font.render(status_text, True, text_color)
+        text_rect = text.get_rect(center=(WINDOW_WIDTH//2, STATUS_BAR_HEIGHT//2))
+        self.screen.blit(text, text_rect)
+        
         # Draw the checkerboard
         for row in range(BOARD_SIZE):
             for col in range(BOARD_SIZE):
                 x = col * SQUARE_SIZE
-                y = row * SQUARE_SIZE
+                y = row * SQUARE_SIZE + STATUS_BAR_HEIGHT  # Offset by status bar height
                 
                 # Draw square
                 color = WHITE if (row + col) % 2 == 0 else GRAY
@@ -92,20 +110,14 @@ class CheckersGame:
                                         (255, 215, 0),  # Gold color for king
                                         center, radius // 2)
 
-        # Draw game status
-        if self.game_over:
-            status_text = f"{'White' if self.winner == 1 else 'Black'} wins!"
-            text = self.font.render(status_text, True, BLACK)
-            text_rect = text.get_rect(center=(WINDOW_SIZE//2, 30))
-            self.screen.blit(text, text_rect)
-        else:
-            status_text = f"{'White' if self.turn == 1 else 'Black'}'s turn"
-            text = self.font.render(status_text, True, BLACK)
-            text_rect = text.get_rect(center=(WINDOW_SIZE//2, 30))
-            self.screen.blit(text, text_rect)
+        # Game status is now drawn at the top of the board
 
     def get_square_from_pos(self, pos):
         x, y = pos
+        # Adjust y coordinate to account for status bar
+        if y < STATUS_BAR_HEIGHT:
+            return None  # Clicked on status bar
+        y -= STATUS_BAR_HEIGHT
         row = y // SQUARE_SIZE
         col = x // SQUARE_SIZE
         if 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE:
